@@ -273,9 +273,29 @@ public class ServerServlet extends HttpServlet {
         out.println("<ul>");
         if (game.getPlayA() != null) {
           out.println("<li>" + game.getPlayerA() + " plays " + game.getPlayA() + "</li>");
+        } else {
+          String sn = URLEncoder.encode(game.getPlayerA().getServerName(), "UTF-8");
+          String commandConfess = "\"" + game.getPlayerA().getPlayerName() + "\" plays \"Confess\" in game #"
+              + game.getGameId();
+          String commandBeQuiet = "\"" + game.getPlayerA().getPlayerName() + "\" plays \"Be Quiet\" in game #"
+              + game.getGameId();
+          out.println("<li><a href=\"" + sn + "?command=" + URLEncoder.encode(commandConfess, "UTF-8") + "\">"
+              + game.getPlayerA() + " plays Confess</a></li>");
+          out.println("<li><a href=\"" + sn + "?command=" + URLEncoder.encode(commandBeQuiet, "UTF-8") + "\">"
+              + game.getPlayerA() + " plays Be Quiet</a></li>");
         }
         if (game.getPlayB() != null) {
           out.println("<li>" + game.getPlayerB() + " plays " + game.getPlayB() + "</li>");
+        } else {
+          String sn = URLEncoder.encode(game.getPlayerB().getServerName(), "UTF-8");
+          String commandConfess = "\"" + game.getPlayerB().getPlayerName() + "\" plays \"Confess\" in game #"
+              + game.getGameId();
+          String commandBeQuiet = "\"" + game.getPlayerB().getPlayerName() + "\" plays \"Be Quiet\" in game #"
+              + game.getGameId();
+          out.println("<li><a href=\"" + sn + "?command=" + URLEncoder.encode(commandConfess, "UTF-8") + "\">"
+              + game.getPlayerB() + " plays Confess</a></li>");
+          out.println("<li><a href=\"" + sn + "?command=" + URLEncoder.encode(commandBeQuiet, "UTF-8") + "\">"
+              + game.getPlayerB() + " plays Be Quiet</a></li>");
         }
         if (game.bothHavePlayed()) {
           out.println("<li>" + game.getPlayerA() + " wins " + game.getScoreA() + " points</li>");
@@ -316,12 +336,12 @@ public class ServerServlet extends HttpServlet {
       }
       out.println("</table>");
     }
-    
+
     out.println("<h2>Other Servers</h2>");
     out.println("<ul>");
     for (String otherServerName : playerMap.keySet()) {
-      out.println("  <li><a href=\"" + URLEncoder.encode(otherServerName, "UTF-8") + "\">"
-          + otherServerName + "</a></li>");
+      out.println(
+          "  <li><a href=\"" + URLEncoder.encode(otherServerName, "UTF-8") + "\">" + otherServerName + "</a></li>");
     }
     out.println("</ul>");
     out.println("  </body>");
