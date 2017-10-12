@@ -5,8 +5,12 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -20,7 +24,6 @@ public class ServerServlet extends HttpServlet {
 
   private static Map<Integer, Game> gamesInPlayMap = new HashMap<>();
   private static int gameId = 0;
-  private static Map<Player, Integer> playerScoreMap = new HashMap<>();
   private static Map<String, Map<String, Player>> playerMap = new HashMap<>();
   private static Set<Game> pendingGameSet = new HashSet<>();
 
@@ -69,8 +72,6 @@ public class ServerServlet extends HttpServlet {
     }
   }
 
-
-
   private static Game getGame(Player player) {
     Game game = getNextGame(player);
     if (game == null) {
@@ -93,8 +94,7 @@ public class ServerServlet extends HttpServlet {
   }
 
   @Override
-  protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-      throws ServletException, IOException {
+  protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
     String serverName = readServerName(req);
     resp.setContentType("test/plain");
@@ -145,9 +145,8 @@ public class ServerServlet extends HttpServlet {
         Player playerA = getPlayer(playerName, converseRequest.getServerName());
         Game game = getGame(playerA);
         converseRequest.setGame(game);
-        return "\"" + playerName + "\" can play \""
-            + game.getOtherPlayer(playerA).getPlayerWithServerName() + "\" in game #"
-            + game.getGameId();
+        return "\"" + playerName + "\" can play \"" + game.getOtherPlayer(playerA).getPlayerWithServerName()
+            + "\" in game #" + game.getGameId();
       }
     } else {
       // "A" plays "Confess" in game #1
@@ -175,22 +174,14 @@ public class ServerServlet extends HttpServlet {
       synchronized (game) {
         if (game.bothHavePlayed()) {
           {
-            Integer originalScoreA = playerScoreMap.get(game.getPlayerA());
-            if (originalScoreA == null) {
-              playerScoreMap.put(game.getPlayerA(), game.getScoreA());
-            } else {
-              playerScoreMap.put(game.getPlayerA(), originalScoreA + game.getScoreA());
-            }
+            game.getPlayerA().addScore(game.getScoreA());
+            game.getPlayerA().incPlayCount();
           }
           {
-            Integer originalScoreB = playerScoreMap.get(game.getPlayerB());
-            if (originalScoreB == null) {
-              playerScoreMap.put(game.getPlayerB(), game.getScoreB());
-            } else {
-              playerScoreMap.put(game.getPlayerB(), originalScoreB + game.getScoreB());
-            }
+            game.getPlayerB().addScore(game.getScoreB());
+            game.getPlayerB().incPlayCount();
           }
-          gamesInPlayMap.remove(game);
+          gamesInPlayMap.remove(game.getGameId());
           game.notify();
         } else {
           while (!game.bothHavePlayed()) {
@@ -201,9 +192,9 @@ public class ServerServlet extends HttpServlet {
           }
         }
       }
-      return "\"" + game.getOtherPlayer(player) + "\" plays \"" + game.getOtherPlay(player)
-          + "\" for " + game.getOtherScore(player) + " points and \"" + game.getPlayer(player)
-          + "\" plays \"" + game.getPlay(player) + "\" for " + game.getScore(player) + ".";
+      return "\"" + game.getOtherPlayer(player) + "\" plays \"" + game.getOtherPlay(player) + "\" for "
+          + game.getOtherScore(player) + " points and \"" + game.getPlayer(player) + "\" plays \""
+          + game.getPlay(player) + "\" for " + game.getScore(player) + ".";
     }
 
     return "I don't know what you want";
@@ -222,8 +213,7 @@ public class ServerServlet extends HttpServlet {
   }
 
   @Override
-  protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-      throws ServletException, IOException {
+  protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
     String serverName = readServerName(req);
     String command = req.getParameter("command");
@@ -251,14 +241,14 @@ public class ServerServlet extends HttpServlet {
     if (converseRequest != null && converseRequest.getGame() != null) {
       Game game = converseRequest.getGame();
       if (!game.bothHavePlayed()) {
-        String commandConfess = "\"" + converseRequest.getPlayerName()
-            + "\" plays \"Confess\" in game #" + game.getGameId();
-        String commandBeQuiet = "\"" + converseRequest.getPlayerName()
-            + "\" plays \"Be Quiet\" in game #" + game.getGameId();
-        out.println("<p><a href=\"" + serverNameEncoded + "?command="
-            + URLEncoder.encode(commandConfess, "UTF-8") + "\">" + commandConfess + "</a></p>");
-        out.println("<p><a href=\"" + serverNameEncoded + "?command="
-            + URLEncoder.encode(commandBeQuiet, "UTF-8") + "\">" + commandBeQuiet + "</a></p>");
+        String commandConfess = "\"" + converseRequest.getPlayerName() + "\" plays \"Confess\" in game #"
+            + game.getGameId();
+        String commandBeQuiet = "\"" + converseRequest.getPlayerName() + "\" plays \"Be Quiet\" in game #"
+            + game.getGameId();
+        out.println("<p><a href=\"" + serverNameEncoded + "?command=" + URLEncoder.encode(commandConfess, "UTF-8")
+            + "\">Confess</a></p>");
+        out.println("<p><a href=\"" + serverNameEncoded + "?command=" + URLEncoder.encode(commandBeQuiet, "UTF-8")
+            + "\">Be Quiet</a></p>");
       }
     }
     out.println("    Example commands:");
@@ -277,8 +267,8 @@ public class ServerServlet extends HttpServlet {
     }
     out.println("   <h2>In Play</h2>");
     for (Game game : gamesInPlayMap.values()) {
-      out.println("<p>" + game.getPlayerA() + " is playing with " + game.getPlayerB() + " in game #"
-          + game.getGameId() + "</p>");
+      out.println("<p>" + game.getPlayerA() + " is playing with " + game.getPlayerB() + " in game #" + game.getGameId()
+          + "</p>");
       if (game.getPlayA() != null || game.getPlayB() != null) {
         out.println("<ul>");
         if (game.getPlayA() != null) {
@@ -294,18 +284,46 @@ public class ServerServlet extends HttpServlet {
         out.println("</ul>");
       }
     }
-    out.println("<h2>Player Scores for + " + serverName + "</h2>");
-    out.println("<table>");
-    for (Player player : playerScoreMap.keySet()) {
-      if (player.getServerName().equals(serverName)) {
-        Integer overallScore = playerScoreMap.get(player);
-        out.println("  <tr>");
-        out.println("    <td>" + player.getPlayerName() + "</td>");
-        out.println("    <td>" + overallScore + "</td>");
-        out.println("  </tr>");
+    if (playerMap.get(serverName) != null) {
+      out.println("<h2>Player Scores for " + serverName + "</h2>");
+      out.println("<table>");
+      out.println("  <tr>");
+      out.println("    <th>Player</th>");
+      out.println("    <th>Play Count</th>");
+      out.println("    <th>Average Score</th>");
+      out.println("  </tr>");
+      List<Player> playerScoreList = new ArrayList<>(playerMap.get(serverName).values());
+      Collections.sort(playerScoreList, new Comparator<Player>() {
+        @Override
+        public int compare(Player player1, Player player2) {
+          if (player1.getAverageScore() == player2.getAverageScore()) {
+            return 0;
+          } else if (player1.getAverageScore() < player2.getAverageScore()) {
+            return 1;
+          }
+          return -1;
+        }
+      });
+      for (Player player : playerScoreList) {
+        if (player.getServerName().equals(serverName)) {
+          String link = serverNameEncoded + "?command=" + URLEncoder.encode("\"Sam\" wants to play", "UTF-8");
+          out.println("  <tr>");
+          out.println("    <td><a href=\"" + link + "\">" + player.getPlayerName() + "</a></td>");
+          out.println("    <td>" + player.getPlayCount() + "</td>");
+          out.println("    <td>" + player.getAverageScore() + "</td>");
+          out.println("  </tr>");
+        }
       }
+      out.println("</table>");
     }
-    out.println("</table>");
+    
+    out.println("<h2>Other Servers</h2>");
+    out.println("<ul>");
+    for (String otherServerName : playerMap.keySet()) {
+      out.println("  <li><a href=\"" + URLEncoder.encode(otherServerName, "UTF-8") + "\">"
+          + otherServerName + "</a></li>");
+    }
+    out.println("</ul>");
     out.println("  </body>");
     out.println("</html>");
 

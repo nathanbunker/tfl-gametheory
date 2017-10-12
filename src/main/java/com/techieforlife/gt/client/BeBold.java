@@ -8,7 +8,7 @@ public class BeBold extends Client {
 
   @Override
   public boolean confess(String otherPlayer) {
-    return !otherPlayer.toUpperCase().equals(otherPlayer);
+    return !otherPlayer.toLowerCase().equals(otherPlayer);
   }
   
   @Override

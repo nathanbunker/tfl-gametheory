@@ -4,6 +4,29 @@ public class Player {
   private String serverName = "";
   private String playerName = "";
   private int cumulativeScore = 0;
+  private int playCount = 0;
+  private double averageScore = 0.0;
+
+  public double getAverageScore() {
+    return averageScore;
+  }
+
+  public void incPlayCount() {
+    playCount++;
+    averageScore = cumulativeScore / (double) playCount;
+  }
+
+  public void addScore(int score) {
+    cumulativeScore += score;
+  }
+
+  public int getPlayCount() {
+    return playCount;
+  }
+
+  public void setPlayCount(int playCount) {
+    this.playCount = playCount;
+  }
 
   public String getServerName() {
     return serverName;
