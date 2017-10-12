@@ -3,7 +3,16 @@ package com.techieforlife.gt;
 public class ConverseRequest {
   private String request = "";
   private Game game = null;
-  private  String playerName = "";
+  private String playerName = "";
+  private String serverName = "";
+
+  public String getServerName() {
+    return serverName;
+  }
+
+  public void setServerName(String serverName) {
+    this.serverName = serverName;
+  }
 
   public String getPlayerName() {
     return playerName;

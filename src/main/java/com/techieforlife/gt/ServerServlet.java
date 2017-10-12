@@ -2,6 +2,8 @@ package com.techieforlife.gt;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,20 +15,26 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+@SuppressWarnings("serial")
 public class ServerServlet extends HttpServlet {
 
   private static Map<Integer, Game> gamesInPlayMap = new HashMap<>();
   private static int gameId = 0;
   private static Map<Player, Integer> playerScoreMap = new HashMap<>();
-  private static Map<String, Player> playerMap = new HashMap<>();
+  private static Map<String, Map<String, Player>> playerMap = new HashMap<>();
   private static Set<Game> pendingGameSet = new HashSet<>();
 
-  private static Player getPlayer(String playerName) {
+  private static Player getPlayer(String playerName, String serverName) {
     synchronized (playerMap) {
-      Player player = playerMap.get(playerName);
+      Map<String, Player> serverMap = playerMap.get(serverName);
+      if (serverMap == null) {
+        serverMap = new HashMap<>();
+        playerMap.put(serverName, serverMap);
+      }
+      Player player = serverMap.get(playerName);
       if (player == null) {
-        player = new Player(playerName);
-        playerMap.put(playerName, player);
+        player = new Player(playerName, serverName);
+        serverMap.put(playerName, player);
       }
       return player;
     }
@@ -87,6 +95,8 @@ public class ServerServlet extends HttpServlet {
   @Override
   protected void doPost(HttpServletRequest req, HttpServletResponse resp)
       throws ServletException, IOException {
+
+    String serverName = readServerName(req);
     resp.setContentType("test/plain");
     String command = req.getParameter("command");
     if (command == null) {
@@ -94,8 +104,33 @@ public class ServerServlet extends HttpServlet {
     }
     ConverseRequest converseRequest = new ConverseRequest();
     converseRequest.setRequest(command);
+    converseRequest.setServerName(serverName);
     resp.getWriter().println(converse(converseRequest));
     resp.getWriter().close();
+  }
+
+  private String readServerName(HttpServletRequest req) {
+    String serverName;
+    {
+      serverName = req.getRequestURI();
+      int i = serverName.lastIndexOf("/");
+      if (i >= 0) {
+        serverName = serverName.substring(i).trim();
+        if (serverName.startsWith("/")) {
+          serverName = serverName.substring(1).trim();
+        }
+        try {
+          serverName = URLDecoder.decode(serverName, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+      }
+      if (serverName.equals("")) {
+        serverName = "the Cloud";
+      }
+    }
+    return serverName;
   }
 
   private String converse(ConverseRequest converseRequest) {
@@ -107,11 +142,12 @@ public class ServerServlet extends HttpServlet {
       String playerName = getNextQuotedString(s);
       if (playerName != null) {
         converseRequest.setPlayerName(playerName);
-        Player playerA = getPlayer(playerName);
+        Player playerA = getPlayer(playerName, converseRequest.getServerName());
         Game game = getGame(playerA);
         converseRequest.setGame(game);
-        return "\"" + playerName + "\" can play \"" + game.getOtherPlayer(playerA).getPlayerName()
-            + "\" in game #" + game.getGameId();
+        return "\"" + playerName + "\" can play \""
+            + game.getOtherPlayer(playerA).getPlayerWithServerName() + "\" in game #"
+            + game.getGameId();
       }
     } else {
       // "A" plays "Confess" in game #1
@@ -128,7 +164,7 @@ public class ServerServlet extends HttpServlet {
         return "No player name, what gives? ";
       }
       converseRequest.setPlayerName(playerName);
-      Player player = getPlayer(playerName);
+      Player player = getPlayer(playerName, converseRequest.getServerName());
       int playsIn = s.indexOf(" plays ");
       if (playsIn == -1) {
         return "Who are you playing against? ";
@@ -166,8 +202,8 @@ public class ServerServlet extends HttpServlet {
         }
       }
       return "\"" + game.getOtherPlayer(player) + "\" plays \"" + game.getOtherPlay(player)
-          + "\", \"" + player + "\" receives " + game.getScore(player) + ", \""
-          + game.getOtherPlayer(player) + "\" receives " + game.getOtherScore(player) + "";
+          + "\" for " + game.getOtherScore(player) + " points and \"" + game.getPlayer(player)
+          + "\" plays \"" + game.getPlay(player) + "\" for " + game.getScore(player) + ".";
     }
 
     return "I don't know what you want";
@@ -189,23 +225,26 @@ public class ServerServlet extends HttpServlet {
   protected void doGet(HttpServletRequest req, HttpServletResponse resp)
       throws ServletException, IOException {
 
+    String serverName = readServerName(req);
     String command = req.getParameter("command");
 
     PrintWriter out = resp.getWriter();
     out.println("<!doctype html>");
     out.println("<html lang=\"en\">");
     out.println("  <head>");
-    out.println("    <title>Game Theory Server</title>");
+    out.println("    <title>Game Theory Server for " + serverName + "</title>");
     out.println("  </head>");
     out.println("  <body>");
-    out.println("    <h1>Game Theory Server</h1>");
+    out.println("    <h1>Game Theory Server for " + serverName + "</h1>");
     ConverseRequest converseRequest = null;
     if (command != null) {
       converseRequest = new ConverseRequest();
       converseRequest.setRequest(command);
+      converseRequest.setServerName(serverName);
       out.println("    <p>" + converse(converseRequest) + "</p>");
     }
-    out.println("    <form action=\"server\" method=\"GET\">");
+    String serverNameEncoded = URLEncoder.encode(serverName, "UTF-8");
+    out.println("    <form action=\"" + serverNameEncoded + "\" method=\"GET\">");
     out.println("      <input type=\"text\" name=\"command\" size=\"40\"/>");
     out.println("      <input type=\"submit\" name=\"action\" value=\"Submit\"/>");
     out.println("    </form>");
@@ -216,10 +255,10 @@ public class ServerServlet extends HttpServlet {
             + "\" plays \"Confess\" in game #" + game.getGameId();
         String commandBeQuiet = "\"" + converseRequest.getPlayerName()
             + "\" plays \"Be Quiet\" in game #" + game.getGameId();
-        out.println("<p><a href=\"server?command=" + URLEncoder.encode(commandConfess, "UTF-8")
-            + "\">" + commandConfess + "</a></p>");
-        out.println("<p><a href=\"server?command=" + URLEncoder.encode(commandBeQuiet, "UTF-8")
-            + "\">" + commandBeQuiet + "</a></p>");
+        out.println("<p><a href=\"" + serverNameEncoded + "?command="
+            + URLEncoder.encode(commandConfess, "UTF-8") + "\">" + commandConfess + "</a></p>");
+        out.println("<p><a href=\"" + serverNameEncoded + "?command="
+            + URLEncoder.encode(commandBeQuiet, "UTF-8") + "\">" + commandBeQuiet + "</a></p>");
       }
     }
     out.println("    Example commands:");
@@ -255,14 +294,16 @@ public class ServerServlet extends HttpServlet {
         out.println("</ul>");
       }
     }
-    out.println("<h2>Player Scores</h2>");
+    out.println("<h2>Player Scores for + " + serverName + "</h2>");
     out.println("<table>");
     for (Player player : playerScoreMap.keySet()) {
-      Integer overallScore = playerScoreMap.get(player);
-      out.println("  <tr>");
-      out.println("    <td>" + player.getPlayerName() + "</td>");
-      out.println("    <td>" + overallScore + "</td>");
-      out.println("  </tr>");
+      if (player.getServerName().equals(serverName)) {
+        Integer overallScore = playerScoreMap.get(player);
+        out.println("  <tr>");
+        out.println("    <td>" + player.getPlayerName() + "</td>");
+        out.println("    <td>" + overallScore + "</td>");
+        out.println("  </tr>");
+      }
     }
     out.println("</table>");
     out.println("  </body>");

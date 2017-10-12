@@ -20,8 +20,10 @@ public class Game {
   public void setPlay(String play, Player player) {
     if (player.equals(playerA)) {
       playA = play;
-    } else {
+    } else if (player.equals(playerB)) {
       playB = play;
+    } else {
+      throw new RuntimeException("Player " + player + " is not playing this game!");
     }
     if (playA != null && playB != null) {
       // score it!
@@ -54,6 +56,12 @@ public class Game {
     return playA;
   }
 
+  public String getPlay(Player player) {
+    if (playerA.equals(player)) {
+      return playA;
+    }
+    return playB;
+  }
   public int getOtherScore(Player player) {
     if (playerA.equals(player)) {
       return scoreB;
@@ -117,6 +125,13 @@ public class Game {
       return playerB;
     }
     return playerA;
+  }
+
+  public Player getPlayer(Player player) {
+    if (playerA.equals(player)) {
+      return playerA;
+    }
+    return playerB;
   }
 
   public Player getPlayerB() {

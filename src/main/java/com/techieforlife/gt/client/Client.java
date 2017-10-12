@@ -14,7 +14,8 @@ import java.util.Random;
 public abstract class Client extends Thread {
 
   private Random random = new Random();
-  private static final String URL = "http://imm.pagekite.me/gt/server";
+  //private static final String URL = "http://imm.pagekite.me/gt/server";
+  private static final String URL = "http://localhost:8080/the%20Peanut%20Gallery";
 
   protected String name;
 
