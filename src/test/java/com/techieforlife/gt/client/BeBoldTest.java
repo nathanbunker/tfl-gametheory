@@ -1,7 +1,5 @@
 package com.techieforlife.gt.client;
 
-import junit.framework.TestCase;
-
 public class BeBoldTest extends ClientTest  {
   
   protected void init() {
