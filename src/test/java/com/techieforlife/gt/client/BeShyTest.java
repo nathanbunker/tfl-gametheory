@@ -1,44 +1,42 @@
 package com.techieforlife.gt.client;
 
-import junit.framework.TestCase;
-
-public class BeBoldTest extends ClientTest  {
-  
+public class BeShyTest extends ClientTest {
   protected void init() {
-    client = new BeBold(ME);
+    client = new BeShy(ME);
   }
-  public void test()
-  {
+
+  public void test() {
     init();
     playerName = "LARRY";
-    expectNice();
-
-    init();
-    playerName = "Larry";
-    expectNice();
-
-    init();
-    playerName = "larry";
     expectMean();
 
     init();
-    playerName = "larrY";
-    expectNice();
+    playerName = "Larry";
+    expectMean();
 
     init();
     playerName = "larry";
+    expectNice();
+
+    init();
+    playerName = "larrY";
+    expectMean();
+
+    init();
+    playerName = "larry";
+    expectNice();
+    for (int i = 0; i < 100; i++) {
+      playMean();
+      expectNice();
+    }
+
+    init();
+    playerName = "Larry";
     expectMean();
     for (int i = 0; i < 100; i++) {
       playMean();
       expectMean();
     }
 
-    init();
-    playerName = "Larry";
-    expectNice();
-    for (int i = 0; i < 100; i++) {
-      playMean();
-      expectNice();
-    }
   }
 }
