@@ -66,7 +66,7 @@ public abstract class Client extends Thread {
             }
           }
           synchronized (this) {
-            this.wait(1000 * random.nextInt(15) + 5);
+            this.wait(1000 * (random.nextInt(15) + 5));
           }
         }
       }
